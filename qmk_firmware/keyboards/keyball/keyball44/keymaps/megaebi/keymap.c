@@ -83,6 +83,25 @@ void pointing_device_init_user(void) {
 static int8_t ball_dx = 0;
 static int8_t ball_dy = 0;
 
+// 最初に押されてるキーを取得（ざっくり版）
+uint8_t get_first_keycode(void) {
+  for (int i = 0; i < MATRIX_ROWS; i++) {
+      for (int j = 0; j < MATRIX_COLS; j++) {
+          if (matrix_is_on(i, j)) {
+              return keymap_key_to_keycode(layer_state, (keypos_t){i, j});
+          }
+      }
+  }
+  return 0;
+}
+
+// トラックボールの瞬間ベクトルを更新
+report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
+  ball_dx = mouse_report.x;
+  ball_dy = mouse_report.y;
+  return mouse_report;
+}
+
 bool oled_task_user(void) {
     char buf[32];
 
@@ -121,23 +140,4 @@ bool oled_task_user(void) {
     }
 
     return false;
-}
-
-// 最初に押されてるキーを取得（ざっくり版）
-uint8_t get_first_keycode(void) {
-    for (int i = 0; i < MATRIX_ROWS; i++) {
-        for (int j = 0; j < MATRIX_COLS; j++) {
-            if (matrix_is_on(i, j)) {
-                return keymap_key_to_keycode(layer_state, (keypos_t){i, j});
-            }
-        }
-    }
-    return 0;
-}
-
-// トラックボールの瞬間ベクトルを更新
-report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
-    ball_dx = mouse_report.x;
-    ball_dy = mouse_report.y;
-    return mouse_report;
 }
