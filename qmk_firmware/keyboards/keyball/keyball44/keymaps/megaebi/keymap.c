@@ -77,6 +77,7 @@ void pointing_device_init_user(void) {
 #endif
 
 //ここから追加
+#include <stdio.h>
 #include "keyball44.h"
 
 bool oled_task_user(void) {
