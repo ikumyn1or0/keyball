@@ -75,3 +75,23 @@ void pointing_device_init_user(void) {
     set_auto_mouse_enable(true);
 }
 #endif
+
+//ここから追加
+#include "keyball44.h"
+
+bool oled_task_user(void) {
+    char buf[32];
+
+    // レイヤー番号を1行で表示
+    snprintf(buf, sizeof(buf), "Layer: %d", get_highest_layer(layer_state));
+    oled_write_ln(buf, false);
+
+    // CapsLock状態を1行で表示
+    oled_write_ln(host_keyboard_led_state().caps_lock ? "Caps: ON" : "Caps: OFF", false);
+
+    // Ctrl押下状態を1行で表示
+    bool is_ctrl = get_mods() & MOD_MASK_CTRL;
+    oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
+
+    return false;
+}
