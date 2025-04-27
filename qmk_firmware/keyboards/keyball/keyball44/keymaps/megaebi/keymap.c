@@ -79,7 +79,6 @@ void pointing_device_init_user(void) {
 //ここから追加
 #include "keyball44.h"
 #include <stdio.h>
-#include "oled_font.h"  // フォント切替に必要
 
 // プロトタイプ宣言
 void render_logo(void);
@@ -112,8 +111,6 @@ bool oled_task_user(void) {
   char buf[64];
 
   if (is_keyboard_master()) {
-      oled_set_font(FONT_KEYBOARD);  // フォントを少し大きめにする
-
       // Shift状態
       bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
       oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
@@ -130,10 +127,10 @@ bool oled_task_user(void) {
       uint8_t layer = get_highest_layer(layer_state);
       oled_write_ln(PSTR("Layer:"), false);
       static const char *layer_names[] = {
-          "Alphabet",
-          "Mouse/Direction",
-          "Number/Function",
-          "Symbol"
+          "ABC",
+          "Mouse/ ->",
+          "123/Fn",
+          "!?#()_:;"
       };
       if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
           oled_write_ln(layer_names[layer], false);
