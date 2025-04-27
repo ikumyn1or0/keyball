@@ -80,33 +80,6 @@ void pointing_device_init_user(void) {
 #include "keyball44.h"
 #include <stdio.h>
 
-// プロトタイプ宣言
-void render_logo(void);
-uint8_t get_pressed_keycode(void);
-
-// トラックボール移動量（瞬間ベクトル保存用）
-static int8_t ball_dx = 0;
-static int8_t ball_dy = 0;
-
-// 押してるキーを1個だけ拾う簡易関数
-uint8_t get_pressed_keycode(void) {
-  for (int i = 0; i < MATRIX_ROWS; i++) {
-      for (int j = 0; j < MATRIX_COLS; j++) {
-          if (matrix_is_on(i, j)) {
-              return keymap_key_to_keycode(layer_state, (keypos_t){i, j});
-          }
-      }
-  }
-  return 0;
-}
-
-// トラックボール移動ベクトル保存
-report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
-  ball_dx = mouse_report.x;
-  ball_dy = mouse_report.y;
-  return mouse_report;
-}
-
 bool oled_task_user(void) {
   char buf[64];
 
@@ -119,13 +92,8 @@ bool oled_task_user(void) {
       bool is_ctrl = get_mods() & MOD_MASK_CTRL;
       oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
 
-      // KeysとVecを1行で表示
-      snprintf(buf, sizeof(buf), "Keys & Vec: %02X (X%d, Y%d)", get_pressed_keycode(), ball_dx, ball_dy);
-      oled_write_ln(buf, false);
-
       // レイヤー表示
       uint8_t layer = get_highest_layer(layer_state);
-      oled_write_ln(PSTR("Layer:"), false);
       static const char *layer_names[] = {
           "ABC",
           "Mouse/ ->",
@@ -133,9 +101,10 @@ bool oled_task_user(void) {
           "!?#()_:;"
       };
       if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
-          oled_write_ln(layer_names[layer], false);
+        snprintf(buf, sizeof(buf), "Layer: %s", layer_names[layer]);
+        oled_write_ln(buf, false);
       } else {
-          oled_write_ln(PSTR("Unknown"), false);
+          oled_write_ln(PSTR("Layer: Unknown"), false);
       }
   } else {
       // 右手は何もしないか、render_logo()を呼ぶ
