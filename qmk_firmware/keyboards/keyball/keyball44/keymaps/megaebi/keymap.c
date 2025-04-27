@@ -77,22 +77,67 @@ void pointing_device_init_user(void) {
 #endif
 
 //ここから追加
-#include <stdio.h>
 #include "keyball44.h"
+#include <stdio.h>
+
+static int8_t ball_dx = 0;
+static int8_t ball_dy = 0;
 
 bool oled_task_user(void) {
     char buf[32];
 
-    // レイヤー番号を1行で表示
-    snprintf(buf, sizeof(buf), "Layer: %d", get_highest_layer(layer_state));
-    oled_write_ln(buf, false);
+    if (is_keyboard_master()) {
+        // 左手（master）
 
-    // CapsLock状態を1行で表示
-    oled_write_ln(host_keyboard_led_state().caps_lock ? "Caps: ON" : "Caps: OFF", false);
+        bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
+        oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
 
-    // Ctrl押下状態を1行で表示
-    bool is_ctrl = get_mods() & MOD_MASK_CTRL;
-    oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
+        bool is_ctrl = get_mods() & MOD_MASK_CTRL;
+        oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
+
+        snprintf(buf, sizeof(buf), "Keys: %02X", get_first_keycode());
+        oled_write_ln(buf, false);
+
+        // トラックボール移動ベクトル
+        snprintf(buf, sizeof(buf), "Vec: X%d Y%d", ball_dx, ball_dy);
+        oled_write_ln(buf, false);
+
+    } else {
+        // 右手（slave）
+
+        oled_write_ln(PSTR("Layer:"), false);
+        uint8_t layer = get_highest_layer(layer_state);
+        static const char *layer_names[] = {
+            "Alphabet",
+            "Mouse/Direction",
+            "Number/Function",
+            "Symbol"
+        };
+        if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
+            oled_write_ln(layer_names[layer], false);
+        } else {
+            oled_write_ln(PSTR("Unknown"), false);
+        }
+    }
 
     return false;
+}
+
+// 最初に押されてるキーを取得（ざっくり版）
+uint8_t get_first_keycode(void) {
+    for (int i = 0; i < MATRIX_ROWS; i++) {
+        for (int j = 0; j < MATRIX_COLS; j++) {
+            if (matrix_is_on(i, j)) {
+                return keymap_key_to_keycode(layer_state, (keypos_t){i, j});
+            }
+        }
+    }
+    return 0;
+}
+
+// トラックボールの瞬間ベクトルを更新
+report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
+    ball_dx = mouse_report.x;
+    ball_dy = mouse_report.y;
+    return mouse_report;
 }
