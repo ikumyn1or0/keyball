@@ -81,11 +81,11 @@ void pointing_device_init_user(void) {
 void oled_task_master(void) {
   // Shift
   bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
-  oled_write_ln(is_shift ? PSTR("Shift:ON") : PSTR("Shift:OFF"));
+  oled_write_ln(is_shift ? PSTR("Shift:ON") : PSTR("Shift:OFF"), false);
 
   //Ctrl
   bool is_ctrl = get_mode() & MOD_MASK_CTRL;
-  oled_write_ln(is_ctrl ? PSTR("Ctrl:ON") : PSTR("Ctrl:OFF"));
+  oled_write_ln(is_ctrl ? PSTR("Ctrl:ON") : PSTR("Ctrl:OFF"), false);
 
   //NumLock, CapsLock, ScrollLock
   const led_t led_state = host_keyboard_led_state();
