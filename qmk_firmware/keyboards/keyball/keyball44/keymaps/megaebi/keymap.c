@@ -77,55 +77,43 @@ void pointing_device_init_user(void) {
 #endif
 
 //ここから追加
+#include "keyball44.h"
+#include <stdio.h>
 
-void oled_task_master(void) {
-  // Shift
-  bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
-  oled_write_ln(is_shift ? "Shift:ON" : "Shift:OFF", false);
-
-  //Ctrl
-  bool is_ctrl = get_mods() & MOD_MASK_CTRL;
-  oled_write_ln(is_ctrl ? "Ctrl:ON" : "Ctrl:OFF", false);
-
-  //NumLock, CapsLock, ScrollLock 
-  
-  const led_t led_state = host_keyboard_led_state();
-  oled_write_P(led_state.num_lock ? "NmLk ": "     ", false);
-  oled_write_P(led_state.caps_lock ? "CpLk ": "     ", false);
-  oled_write_P(led_state.scroll_lock ? "ScrLk": "     ", false);
-}
-
-void oled_task_slave(void) {
-  oled_write_P(PSTR("Layer: "), false);
-  switch (get_highest_layer(layer_state)) {
-    case 0:
-      oled_write_P("ABC", false);
-      break;
-
-    case 1:
-      oled_write_P("Mouse/->", false);
-      break;
-
-    case 2:
-      oled_write_P("123/Fn", false);
-      break;
-
-    case 3:
-      oled_write_P("!?#()", false);
-      break;
-
-    default:
-      oled_write_P("Unknown", false);
-      break;
-  }
-}
-
-
+// プロトタイプ宣言
 bool oled_task_user(void) {
+  char buf[64];
+
   if (is_keyboard_master()) {
-    oled_task_master();
+      // Shift状態
+      bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
+      oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
+
+      // Ctrl状態
+      bool is_ctrl = get_mods() & MOD_MASK_CTRL;
+      oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
+
+      const led_t led_state = host_keyboard_led_state();
+      oled_write_P(led_state.num_lock ? "NumLk ": "      ", false);
+      oled_write_P(led_state.caps_lock ? "CapsLk ": "       ", false);
+      oled_write_P(led_state.scroll_lock ? "ScrlLk": "      ", false);
+    
+
   } else {
-    oled_task_slave();
+      // レイヤー表示
+      uint8_t layer = get_highest_layer(layer_state);
+      oled_write_ln(PSTR("Layer:"), false);
+      static const char *layer_names[] = {
+          "ABC",
+          "Mouse/ ->",
+          "123/Fn",
+          "!?#()_:;"
+      };
+      if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
+          oled_write_ln(layer_names[layer], false);
+      } else {
+          oled_write_ln(PSTR("Unknown"), false);
+      }
   }
-  return true;
+  return false;
 }
