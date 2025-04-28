@@ -77,38 +77,54 @@ void pointing_device_init_user(void) {
 #endif
 
 //ここから追加
-#include "keyball44.h"
-#include <stdio.h>
+
+void oled_task_master(void) {
+  // Shift
+  bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
+  oled_write_ln(is_shift ? PSTR("Shift:ON") : PSTR("Shift:OFF"));
+
+  //Ctrl
+  bool is_ctrl = get_mode() & MOD_MASK_CTRL;
+  oled_write_ln(is_ctrl ? PSTR("Ctrl:ON") : PSTR("Ctrl:OFF"));
+
+  //NumLock, CapsLock, ScrollLock
+  const led_t led_state = host_keyboard_led_state();
+  oled_write_P(led_state.num_lock ? PSTR("NumLock "): PSTR("        "), false);
+  oled_write_P(led_state.caps_lock ? PSTR("CapsLock "): PSTR("         "), false);
+  oled_write_P(led_state.num_lock ? PSTR("ScrollLock"): PSTR("          "), false);
+}
+
+void oled_task_slave(void) {
+  old_write_P(PSTR("Layer: "), false);
+  switch (get_highest_layer(layer_state | default_layer_state)) {
+    case 0:
+      oled_write_P(PSTR("ABC"), false);
+      break;
+
+    case 1:
+      oled_write_P(PSTR("Mouse/->"), false);
+      break;
+
+    case 2:
+      oled_write_P(PSTR("123/Fn"), false);
+      break;
+
+    case 3:
+      oled_write_P(PSTR("!?#()"), false);
+      break;
+
+    default:
+      oled_write_P(PSTR("Unknown") false);
+      break;
+  }
+}
+
 
 bool oled_task_user(void) {
-  char buf[64];
-
   if (is_keyboard_master()) {
-      // Shift状態
-      bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
-      oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
-
-      // Ctrl状態
-      bool is_ctrl = get_mods() & MOD_MASK_CTRL;
-      oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
-
-      // レイヤー表示
-      uint8_t layer = get_highest_layer(layer_state);
-      static const char *layer_names[] = {
-          "ABC",
-          "Mouse/ ->",
-          "123/Fn",
-          "!?#()_:;"
-      };
-      if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
-        snprintf(buf, sizeof(buf), "Layer: %s", layer_names[layer]);
-        oled_write_ln(buf, false);
-      } else {
-          oled_write_ln(PSTR("Layer: Unknown"), false);
-      }
+    oled_task_master();
   } else {
-      // 右手は何もしないか、render_logo()を呼ぶ
-      return false;
+    oled_task_slave();
   }
-  return false;
+  return true;
 }
