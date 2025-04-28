@@ -90,7 +90,7 @@ bool oled_task_user(void) {
       // Ctrl状態
       bool is_ctrl = get_mods() & MOD_MASK_CTRL;
       oled_write_ln(is_ctrl ? "Ctrl : ON" : "Ctrl : OFF", false);
-
+  } else {
       // レイヤー表示
       uint8_t layer = get_highest_layer(layer_state);
       static const char *layer_names[] = {
@@ -104,8 +104,6 @@ bool oled_task_user(void) {
       } else {
           oled_write_ln(PSTR("Layer: Unknown"), false);
       }
-  } else {
-      oled_write_ln(PSTR("Keyball44:megaebi"), false);
   }
   return false;
 }
