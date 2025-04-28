@@ -84,18 +84,18 @@ void oled_task_master(void) {
   oled_write_ln(is_shift ? PSTR("Shift:ON") : PSTR("Shift:OFF"), false);
 
   //Ctrl
-  bool is_ctrl = get_mode() & MOD_MASK_CTRL;
+  bool is_ctrl = get_mods() & MOD_MASK_CTRL;
   oled_write_ln(is_ctrl ? PSTR("Ctrl:ON") : PSTR("Ctrl:OFF"), false);
 
   //NumLock, CapsLock, ScrollLock
   const led_t led_state = host_keyboard_led_state();
-  oled_write_P(led_state.num_lock ? PSTR("NumLock "): PSTR("        "), false);
-  oled_write_P(led_state.caps_lock ? PSTR("CapsLock "): PSTR("         "), false);
-  oled_write_P(led_state.num_lock ? PSTR("ScrollLock"): PSTR("          "), false);
+  oled_write_P(led_state.num_lock ? PSTR("NmLk "): PSTR("     "), false);
+  oled_write_P(led_state.caps_lock ? PSTR("CpLk "): PSTR("     "), false);
+  oled_write_P(led_state.num_lock ? PSTR("ScrLk"): PSTR("     "), false);
 }
 
 void oled_task_slave(void) {
-  old_write_P(PSTR("Layer: "), false);
+  oled_write_P(PSTR("Layer: "), false);
   switch (get_highest_layer(layer_state | default_layer_state)) {
     case 0:
       oled_write_P(PSTR("ABC"), false);
@@ -114,7 +114,7 @@ void oled_task_slave(void) {
       break;
 
     default:
-      oled_write_P(PSTR("Unknown") false);
+      oled_write_P(PSTR("Unknown"), false);
       break;
   }
 }
