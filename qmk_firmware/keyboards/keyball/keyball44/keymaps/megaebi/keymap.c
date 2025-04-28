@@ -91,12 +91,6 @@ bool oled_task_user(void) {
       bool is_ctrl = get_mods() & MOD_MASK_CTRL;
       oled_write_ln(is_ctrl ? "Ctrl: ON" : "Ctrl: OFF", false);
 
-      const led_t led_state = host_keyboard_led_state();
-      oled_write_P(led_state.num_lock ? "NumLk ": "      ", false);
-      oled_write_P(led_state.caps_lock ? "CapsLk ": "       ", false);
-      oled_write_P(led_state.scroll_lock ? "ScrlLk": "      ", false);
-    
-
   } else {
       // レイヤー表示
       uint8_t layer = get_highest_layer(layer_state);
