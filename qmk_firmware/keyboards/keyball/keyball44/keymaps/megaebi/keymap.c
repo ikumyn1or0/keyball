@@ -106,9 +106,9 @@ bool oled_task_user(void) {
         // レイヤー表示
         uint8_t layer = get_highest_layer(layer_state);
         static const char *layer_names[] = {
-            "Layer: ABC",
+            "Layer: ABCDEFGH",
             "Layer: Mouse/->",
-            "Layer: 123/Fn",
+            "Layer: 12345/Fn",
             "Layer: !?#()_:;"
         };
         if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
@@ -117,7 +117,7 @@ bool oled_task_user(void) {
             oled_write_ln(PSTR("Layer: Unknown"), false);
         }
     } else {
-        oled_write_raw_P(my_logo, sizeof(my_logo));
+        oledkit_render_logo_user();
     }
     return false;
 }
