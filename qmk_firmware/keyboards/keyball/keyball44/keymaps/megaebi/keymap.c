@@ -80,30 +80,44 @@ void pointing_device_init_user(void) {
 #include "keyball44.h"
 #include <stdio.h>
 
+static const char PROGMEM my_logo[] = {
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0x7f, 0xf3, 0xff, 0xfe, 0x7f, 0xf3, 0xff, 0xff, 0xff, 0xff, 
+    0xe0, 0x8e, 0x64, 0x73, 0xe0, 0x06, 0x60, 0x33, 0xe6, 0x66, 0x67, 0x33, 0xe6, 0x66, 0x67, 0x33, 
+    0xe6, 0x66, 0x67, 0x33, 0xe6, 0x66, 0x67, 0x33, 0xe6, 0x66, 0x67, 0x33, 0xe6, 0x66, 0x67, 0x33, 
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x3f, 0xff, 0xff, 0xbf, 0xbf, 0xff, 0xff, 
+    0xbf, 0xbf, 0xff, 0xff, 0x83, 0x3f, 0xff, 0xff, 0xf7, 0x7f, 0xff, 0xff, 0xf6, 0xff, 0xff, 0xff, 
+    0xee, 0xf1, 0xc8, 0xf3, 0xed, 0xe0, 0xc0, 0x61, 0xdd, 0xce, 0x4e, 0x4c, 0xdb, 0xce, 0x4e, 0x40, 
+    0xbb, 0xce, 0x4e, 0x40, 0x30, 0x4e, 0x4e, 0x4f, 0x7f, 0xa0, 0xce, 0x61, 0x7f, 0xb1, 0xce, 0x70, 
+    0x00, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+};
+
+
 // プロトタイプ宣言
 bool oled_task_user(void) {
-  if (is_keyboard_master()) {
-      // Shift状態
-      bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
-      oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
+    if (is_keyboard_master()) {
+        // Shift状態
+        bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
+        oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
 
-      // Ctrl状態
-      bool is_ctrl = get_mods() & MOD_MASK_CTRL;
-      oled_write_ln(is_ctrl ? "Ctrl : ON" : "Ctrl : OFF", false);
-  } else {
-      // レイヤー表示
-      uint8_t layer = get_highest_layer(layer_state);
-      static const char *layer_names[] = {
-          "Layer: ABC",
-          "Layer: Mouse/->",
-          "Layer: 123/Fn",
-          "Layer: !?#()_:;"
-      };
-      if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
-          oled_write_ln(layer_names[layer], false);
-      } else {
-          oled_write_ln(PSTR("Layer: Unknown"), false);
-      }
-  }
-  return false;
+        // Ctrl状態
+        bool is_ctrl = get_mods() & MOD_MASK_CTRL;
+        oled_write_ln(is_ctrl ? "Ctrl : ON" : "Ctrl : OFF", false);
+
+        // レイヤー表示
+        uint8_t layer = get_highest_layer(layer_state);
+        static const char *layer_names[] = {
+            "Layer: ABC",
+            "Layer: Mouse/->",
+            "Layer: 123/Fn",
+            "Layer: !?#()_:;"
+        };
+        if (layer < sizeof(layer_names) / sizeof(layer_names[0])) {
+            oled_write_ln(layer_names[layer], false);
+        } else {
+            oled_write_ln(PSTR("Layer: Unknown"), false);
+        }
+    } else {
+        oled_write_raw_P(my_logo, sizeof(my_logo));
+    }
+    return false;
 }
