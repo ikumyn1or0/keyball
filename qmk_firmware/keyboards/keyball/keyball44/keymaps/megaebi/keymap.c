@@ -82,8 +82,6 @@ void pointing_device_init_user(void) {
 
 // プロトタイプ宣言
 bool oled_task_user(void) {
-  char buf[64];
-
   if (is_keyboard_master()) {
       // Shift状態
       bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
