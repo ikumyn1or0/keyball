@@ -102,38 +102,52 @@ static const char PROGMEM my_logo[] = {
     0xbb, 0xce, 0x4e, 0x40, 0x30, 0x4e, 0x4e, 0x4f, 0x7f, 0xa0, 0xce, 0x61, 0x7f, 0xb1, 0xce, 0x70,
     0x00, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
+oled_rotation_t oled_init_user(oled_rotation_t rotation)
+{
+    // メイン側は手元から読めるよう時計回りに90度回転 (縦長: 5文字x16行)
+    // サブ側のロゴは oledkit の既定どおり180度回転
+    return is_keyboard_master() ? OLED_ROTATION_90 : OLED_ROTATION_180;
+}
+
+// 指定行に書く。1行5文字ちょうどで書くと自動改行されるため、
+// oled_write_ln は使わず毎回カーソル位置を指定する
+static void write_row(uint8_t row, const char *str)
+{
+    oled_set_cursor(0, row);
+    oled_write(str, false);
+}
+
 bool oled_task_user(void)
 {
     if (is_keyboard_master())
     {
         uint8_t mods = get_mods();
-        oled_set_cursor(0, 0);
 
-        // 1行目: レイヤ番号・名前とスクロールモード (例: "L3 Mouse  Scroll:ON", 1行は21文字まで)
-        static const char *layer_names[] = {"Base  ", "Symbol", "Fn/Num", "Mouse "};
+        // レイヤ番号・名前 (名前は5文字まで)
+        static const char *layer_names[] = {"Base ", "Symbl", "FnNum", "Mouse"};
         uint8_t layer = get_highest_layer(layer_state);
-        oled_write_char('L', false);
-        oled_write_char('0' + layer, false);
-        oled_write_char(' ', false);
-        oled_write(layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "      ", false);
-        oled_write_ln(keyball_get_scroll_mode() ? " Scroll:ON" : " Scroll:OFF", false);
+        char layer_str[] = "L0   ";
+        layer_str[1] = '0' + layer;
+        write_row(0, layer_str);
+        write_row(1, layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "     ");
 
-        // 2行目: 修飾キー (Caps Lock 中も Shift 扱い)
+        // スクロールモード
+        write_row(3, "Scrl ");
+        write_row(4, keyball_get_scroll_mode() ? " ON  " : " OFF ");
+
+        // 修飾キー (Caps Lock 中も Shift 扱い)
         bool is_shift = host_keyboard_led_state().caps_lock || (mods & MOD_MASK_SHIFT);
-        oled_write(is_shift ? "Shift " : "      ", false);
-        oled_write((mods & MOD_MASK_CTRL) ? "Ctrl " : "     ", false);
-        oled_write((mods & MOD_MASK_ALT) ? "Alt " : "    ", false);
-        oled_write_ln((mods & MOD_MASK_GUI) ? "Win" : "", false);
+        write_row(6, is_shift ? "Shift" : "     ");
+        write_row(7, (mods & MOD_MASK_CTRL) ? "Ctrl " : "     ");
+        write_row(8, (mods & MOD_MASK_ALT) ? "Alt  " : "     ");
+        write_row(9, (mods & MOD_MASK_GUI) ? "Win  " : "     ");
 
-        // 3行目: CPI・スクロール除数
-        oled_write_P(PSTR("CPI:"), false);
-        oled_write(get_u8_str(keyball_get_cpi(), ' '), false);
-        oled_write_P(PSTR("00  Div:"), false);
-        oled_write_char('0' + keyball_get_scroll_div(), false);
-        oled_advance_page(true);
-
-        // 4行目: 空行
-        oled_write_ln("", false);
+        // CPI・スクロール除数
+        write_row(11, "CPI  ");
+        write_row(12, get_u16_str((uint16_t)keyball_get_cpi() * 100, ' '));
+        char div_str[] = "Div:0";
+        div_str[4] = '0' + keyball_get_scroll_div();
+        write_row(14, div_str);
     }
     else
     {
