@@ -104,17 +104,54 @@ static const char PROGMEM my_logo[] = {
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation)
 {
-    // メイン側は手元から読めるよう時計回りに90度回転 (縦長: 5文字x16行)
+    // メイン側は手元から読めるよう90度回転 (縦長: 幅32px x 高さ128px、文字なら5文字x16行)
     // サブ側のロゴは oledkit の既定どおり180度回転
-    return is_keyboard_master() ? OLED_ROTATION_90 : OLED_ROTATION_180;
+    return is_keyboard_master() ? OLED_ROTATION_270 : OLED_ROTATION_180;
 }
 
-// 指定行に書く。1行5文字ちょうどで書くと自動改行されるため、
-// oled_write_ln は使わず毎回カーソル位置を指定する
-static void write_row(uint8_t row, const char *str)
+#define OLED_ROW_WIDTH 32 // 回転後の1行(8px高)あたりのバイト数
+
+// 大きなレイヤ番号用のドット絵 (6x8 ドット、各行の上位6ビットを使用)
+static const uint8_t PROGMEM big_digits[][8] = {
+    {0x78, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0x78}, // 0
+    {0x30, 0x70, 0xF0, 0x30, 0x30, 0x30, 0x30, 0xFC}, // 1
+    {0x78, 0xCC, 0x0C, 0x18, 0x30, 0x60, 0xC0, 0xFC}, // 2
+    {0x78, 0xCC, 0x0C, 0x38, 0x0C, 0x0C, 0xCC, 0x78}, // 3
+};
+
+// レイヤ番号をドットマトリクス風に描く (1ドット=3x3px + 1px の隙間、全体 24x32px)
+static void render_big_digit(uint8_t digit, uint8_t x0)
+{
+    for (uint8_t page = 0; page < 4; page++)
+    {
+        for (uint8_t x = 0; x < 24; x++)
+        {
+            uint8_t data = 0;
+            if (digit < ARRAY_SIZE(big_digits) && x % 4 != 3)
+            {
+                for (uint8_t bit = 0; bit < 8; bit++)
+                {
+                    uint8_t y   = page * 8 + bit;
+                    uint8_t row = pgm_read_byte(&big_digits[digit][y / 4]);
+                    if (y % 4 != 3 && (row & (0x80 >> (x / 4))))
+                    {
+                        data |= 1 << bit;
+                    }
+                }
+            }
+            oled_write_raw_byte(data, page * OLED_ROW_WIDTH + x0 + x);
+        }
+    }
+}
+
+// ラベルを1行に書き、active なら行全体を反転して塗りつぶす (label は5文字ちょうど)
+static void write_badge(uint8_t row, const char *label, bool active)
 {
     oled_set_cursor(0, row);
-    oled_write(str, false);
+    oled_write(label, active);
+    // 5文字=30px なので、右端の余り2pxも反転状態に合わせる
+    oled_write_raw_byte(active ? 0xFF : 0x00, row * OLED_ROW_WIDTH + 30);
+    oled_write_raw_byte(active ? 0xFF : 0x00, row * OLED_ROW_WIDTH + 31);
 }
 
 bool oled_task_user(void)
@@ -123,31 +160,19 @@ bool oled_task_user(void)
     {
         uint8_t mods = get_mods();
 
-        // レイヤ番号・名前 (名前は5文字まで)
-        static const char *layer_names[] = {"Base ", "Symbl", "FnNum", "Mouse"};
+        // 0-3行目: レイヤ番号 (大きく)、5行目: レイヤ名
+        static const char *layer_names[] = {" Base", "Symbl", "FnNum", "Mouse"};
         uint8_t layer = get_highest_layer(layer_state);
-        char layer_str[] = "L0   ";
-        layer_str[1] = '0' + layer;
-        write_row(0, layer_str);
-        write_row(1, layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "     ");
+        render_big_digit(layer, 4);
+        write_badge(5, layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "     ", false);
 
-        // スクロールモード
-        write_row(3, "Scrl ");
-        write_row(4, keyball_get_scroll_mode() ? " ON  " : " OFF ");
-
-        // 修飾キー (Caps Lock 中も Shift 扱い)
+        // 7行目以降: スクロールモードと修飾キー (オンの間は反転表示、Caps Lock 中も Shift 扱い)
         bool is_shift = host_keyboard_led_state().caps_lock || (mods & MOD_MASK_SHIFT);
-        write_row(6, is_shift ? "Shift" : "     ");
-        write_row(7, (mods & MOD_MASK_CTRL) ? "Ctrl " : "     ");
-        write_row(8, (mods & MOD_MASK_ALT) ? "Alt  " : "     ");
-        write_row(9, (mods & MOD_MASK_GUI) ? "Win  " : "     ");
-
-        // CPI・スクロール除数
-        write_row(11, "CPI  ");
-        write_row(12, get_u16_str((uint16_t)keyball_get_cpi() * 100, ' '));
-        char div_str[] = "Div:0";
-        div_str[4] = '0' + keyball_get_scroll_div();
-        write_row(14, div_str);
+        write_badge(7, " Scrl", keyball_get_scroll_mode());
+        write_badge(9, "Shift", is_shift);
+        write_badge(11, " Ctrl", mods & MOD_MASK_CTRL);
+        write_badge(13, " Alt ", mods & MOD_MASK_ALT);
+        write_badge(15, " Win ", mods & MOD_MASK_GUI);
     }
     else
     {
