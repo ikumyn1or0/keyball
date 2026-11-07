@@ -72,6 +72,15 @@ void oledkit_render_info_user(void)
 }
 #endif
 
+void keyboard_post_init_user(void)
+{
+    // EEPROM に保存された CPI・スクロール設定を無視して config.h の値に固定する
+    // (設定は USB を挿した側の EEPROM から読まれるため、左右で挙動が変わらないようにする)
+    keyball_set_cpi(0);        // 0 は KEYBALL_CPI_DEFAULT
+    keyball_set_scroll_div(0); // 0 は KEYBALL_SCROLL_DIV_DEFAULT
+    keyball_set_scrollsnap_mode(KEYBALL_SCROLLSNAP_MODE_FREE); // 斜めスクロール可
+}
+
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
 void pointing_device_init_user(void)
 {
@@ -93,35 +102,38 @@ static const char PROGMEM my_logo[] = {
     0xbb, 0xce, 0x4e, 0x40, 0x30, 0x4e, 0x4e, 0x4f, 0x7f, 0xa0, 0xce, 0x61, 0x7f, 0xb1, 0xce, 0x70,
     0x00, 0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-// プロトタイプ宣言
 bool oled_task_user(void)
 {
     if (is_keyboard_master())
     {
-        // Shift状態
-        bool is_shift = host_keyboard_led_state().caps_lock || (get_mods() & MOD_MASK_SHIFT);
-        oled_write_ln(is_shift ? "Shift: ON" : "Shift: OFF", false);
+        uint8_t mods = get_mods();
+        oled_set_cursor(0, 0);
 
-        // Ctrl状態
-        bool is_ctrl = get_mods() & MOD_MASK_CTRL;
-        oled_write_ln(is_ctrl ? "Ctrl : ON" : "Ctrl : OFF", false);
-
-        // レイヤー表示
+        // 1行目: レイヤ番号・名前とスクロールモード (例: "L3 Mouse  Scroll:ON", 1行は21文字まで)
+        static const char *layer_names[] = {"Base  ", "Symbol", "Fn/Num", "Mouse "};
         uint8_t layer = get_highest_layer(layer_state);
-        static const char *layer_names[] = {
-            "Layer: ABCDEF",
-            "Layer: !#()_;",
-            "Layer: 123/Fn",
-            "Layer: Btn/->",
-        };
-        if (layer < sizeof(layer_names) / sizeof(layer_names[0]))
-        {
-            oled_write_ln(layer_names[layer], false);
-        }
-        else
-        {
-            oled_write_ln(PSTR("Layer: Unknown"), false);
-        }
+        oled_write_char('L', false);
+        oled_write_char('0' + layer, false);
+        oled_write_char(' ', false);
+        oled_write(layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "      ", false);
+        oled_write_ln(keyball_get_scroll_mode() ? " Scroll:ON" : " Scroll:OFF", false);
+
+        // 2行目: 修飾キー (Caps Lock 中も Shift 扱い)
+        bool is_shift = host_keyboard_led_state().caps_lock || (mods & MOD_MASK_SHIFT);
+        oled_write(is_shift ? "Shift " : "      ", false);
+        oled_write((mods & MOD_MASK_CTRL) ? "Ctrl " : "     ", false);
+        oled_write((mods & MOD_MASK_ALT) ? "Alt " : "    ", false);
+        oled_write_ln((mods & MOD_MASK_GUI) ? "Win" : "", false);
+
+        // 3行目: CPI・スクロール除数
+        oled_write_P(PSTR("CPI:"), false);
+        oled_write(get_u8_str(keyball_get_cpi(), ' '), false);
+        oled_write_P(PSTR("00  Div:"), false);
+        oled_write_char('0' + keyball_get_scroll_div(), false);
+        oled_advance_page(true);
+
+        // 4行目: 空行
+        oled_write_ln("", false);
     }
     else
     {

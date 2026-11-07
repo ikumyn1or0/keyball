@@ -40,3 +40,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // #define AUTO_MOUSE_TIME 500               // マウスが止まってから元のレイヤに戻るまでの時間
 
 #define DYNAMIC_KEYMAP_LAYER_COUNT 4 // レイヤ数
+
+#define KEYBALL_CPI_DEFAULT 500       // ボールの CPI (100 単位)
+#define KEYBALL_SCROLL_DIV_DEFAULT 4  // スクロール除数 (大きいほど遅い)
