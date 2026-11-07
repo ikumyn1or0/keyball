@@ -144,14 +144,29 @@ static void render_big_digit(uint8_t digit, uint8_t x0)
     }
 }
 
-// ラベルを1行に書き、active なら行全体を反転して塗りつぶす (label は5文字ちょうど)
+// OLED のフォント (keyball/lib/logofont/logofont.c)
+extern const unsigned char font[] PROGMEM;
+
+// ラベルを1行に左揃えで書き、active なら行全体 (32x8px) を反転する。
+// 文字 (5x6px) が行の中央に来るよう、右に1px・下に1pxずらして描く
 static void write_badge(uint8_t row, const char *label, bool active)
 {
-    oled_set_cursor(0, row);
-    oled_write(label, active);
-    // 5文字=30px なので、右端の余り2pxも反転状態に合わせる
-    oled_write_raw_byte(active ? 0xFF : 0x00, row * OLED_ROW_WIDTH + 30);
-    oled_write_raw_byte(active ? 0xFF : 0x00, row * OLED_ROW_WIDTH + 31);
+    uint16_t index = row * OLED_ROW_WIDTH;
+    uint8_t  x     = 0;
+    oled_write_raw_byte(active ? 0xFF : 0x00, index + x++); // 左余白 1px
+    for (; *label && x + OLED_FONT_WIDTH <= OLED_ROW_WIDTH; label++)
+    {
+        const unsigned char *glyph = &font[(*label - OLED_FONT_START) * OLED_FONT_WIDTH];
+        for (uint8_t i = 0; i < OLED_FONT_WIDTH; i++)
+        {
+            uint8_t data = pgm_read_byte(glyph + i) << 1; // 下に 1px
+            oled_write_raw_byte(active ? ~data : data, index + x++);
+        }
+    }
+    while (x < OLED_ROW_WIDTH)
+    {
+        oled_write_raw_byte(active ? 0xFF : 0x00, index + x++);
+    }
 }
 
 bool oled_task_user(void)
@@ -161,18 +176,18 @@ bool oled_task_user(void)
         uint8_t mods = get_mods();
 
         // 0-3行目: レイヤ番号 (大きく)、5行目: レイヤ名
-        static const char *layer_names[] = {" Base", "Symbl", "FnNum", "Mouse"};
+        static const char *layer_names[] = {"Base", "Symbl", "FnNum", "Mouse"};
         uint8_t layer = get_highest_layer(layer_state);
         render_big_digit(layer, 4);
-        write_badge(5, layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "     ", false);
+        write_badge(5, layer < ARRAY_SIZE(layer_names) ? layer_names[layer] : "", false);
 
         // 7行目以降: スクロールモードと修飾キー (オンの間は反転表示、Caps Lock 中も Shift 扱い)
         bool is_shift = host_keyboard_led_state().caps_lock || (mods & MOD_MASK_SHIFT);
-        write_badge(7, " Scrl", keyball_get_scroll_mode());
+        write_badge(7, "Scrl", keyball_get_scroll_mode());
         write_badge(9, "Shift", is_shift);
-        write_badge(11, " Ctrl", mods & MOD_MASK_CTRL);
-        write_badge(13, " Alt ", mods & MOD_MASK_ALT);
-        write_badge(15, " Win ", mods & MOD_MASK_GUI);
+        write_badge(11, "Ctrl", mods & MOD_MASK_CTRL);
+        write_badge(13, "Alt", mods & MOD_MASK_ALT);
+        write_badge(15, "Win", mods & MOD_MASK_GUI);
     }
     else
     {
